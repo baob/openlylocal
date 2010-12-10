@@ -10,7 +10,7 @@ module Openlylocal
                   :telephone, :country, :region
 
     OL_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
-    OL_COUNCILS_URL = "http://openlylocal.com/councils.xml"
+    OL_COUNCILS_URL = "http://openlylocal.com/councils/open.xml"
 
     def initialize(council_node)
       self.xml_data = council_node

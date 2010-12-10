@@ -5,6 +5,14 @@ module Openlylocal
   require 'uri'
 
   class Council
+    
+    # NOTE NOTE NOTE -----  This is not production ready code
+    # 1) Needs lazy loading of URL (I think)
+    # 2) Needs memcaching
+    # 3) Needs either elimination of file or else managing when file goes stale
+    # 4) Protection against HTTP problems, such as 404, server not responsding, short data file
+    # 5) protection against XML parsing errors
+    # 6) Probably more ...
   
     attr_accessor :xml_data, :id, :name, :openlylocal_url, :wikipedia_url, :address, :normalised_title, :url,
                   :telephone, :country, :region

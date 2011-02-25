@@ -55,7 +55,10 @@ describe Openlylocal::Council do
         
       end # context "and with no local file available" do
 
-      context "and with local file available" do
+      context "and with recent local file available" do
+        before(:all) do
+          system( "touch #{Openlylocal::Council.councils_filename}" )
+        end
         it "should not fetch file for .all" do
           Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
           Openlylocal::Council.all

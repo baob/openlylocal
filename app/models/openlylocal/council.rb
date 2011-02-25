@@ -60,20 +60,20 @@ module Openlylocal
     def self.load!
       if !File.exists?(councils_filename)
         fetch_file 
-        @@councils = parse_file(councils_file)
+        @@councils = parse_file
       elsif councils_file.mtime < Time.now - 1.day
         fetch_file
-        @@councils = parse_file(councils_file)
+        @@councils = parse_file
       end
-      @@councils = parse_file(councils_file) unless loaded?
+      @@councils = parse_file unless loaded?
     end
     
     def self.loaded?
       !@@councils.nil?
     end
 
-    def self.parse_file(file)
-      council_doc = REXML::Document.new(file)
+    def self.parse_file
+      council_doc = REXML::Document.new(councils_file)
       council_doc.root.elements.map do |council_node| 
         Council.new(council_node) 
       end

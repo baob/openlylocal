@@ -7,9 +7,7 @@ module Openlylocal
   class Council
     
     # NOTE NOTE NOTE -----  This is not production ready code
-    # 1) Needs lazy loading of URL (I think)
     # 2) Needs memcaching
-    # 3) Needs either elimination of file or else managing when file goes stale
     # 4) Protection against HTTP problems, such as 404, server not responsding, short data file
     # 5) protection against XML parsing errors
     # 6) Probably more ...
@@ -59,7 +57,7 @@ module Openlylocal
       File.new(councils_filename)
     end
     
-    def self.fetch_file_if_needed
+    def self.load!
       if !File.exists?(councils_filename)
         fetch_file 
         @@councils = parse_file(councils_file)
@@ -91,7 +89,7 @@ module Openlylocal
     end
     
     def self.all
-      fetch_file_if_needed unless @@councils
+      load! unless loaded?
       @@councils
     end
 

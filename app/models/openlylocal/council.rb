@@ -16,18 +16,6 @@ module Openlylocal
                   :telephone, :country, :region
     
     @@councils = nil
-    
-    def self.unload!
-      @@councils = nil
-    end
-    
-    def self.councils_filename
-      File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
-    end
-
-    def self.councils_url
-      "http://openlylocal.com/councils/open.xml"
-    end
 
     def initialize(council_node)
       self.xml_data = council_node
@@ -44,57 +32,74 @@ module Openlylocal
       self
     end
 
-    def self.fetch_file
-      url = URI.parse(councils_url)
-      req = Net::HTTP::Get.new(url.path)
-      res = Net::HTTP.start(url.host, url.port) {|http|
-        http.request(req)
-      }
-      File.open(councils_filename, 'w') {|f| f.write(res.body) }
-    end
+    class << self
     
-    def self.councils_file
-      File.new(councils_filename)
-    end
-    
-    def self.load!
-      if !File.exists?(councils_filename)
-        fetch_file 
-        @@councils = parse_file
-      elsif councils_file.mtime < Time.now - 1.day
-        fetch_file
-        @@councils = parse_file
+      def unload!
+        @@councils = nil
       end
-      @@councils = parse_file unless loaded?
-    end
-    
-    def self.loaded?
-      !@@councils.nil?
-    end
 
-    def self.parse_file
-      council_doc = REXML::Document.new(councils_file)
-      council_doc.root.elements.map do |council_node| 
-        Council.new(council_node) 
+      def load!
+        if !File.exists?(councils_filename)
+          fetch_file 
+          @@councils = parse_file
+        elsif councils_file.mtime < Time.now - 1.day
+          fetch_file
+          @@councils = parse_file
+        end
+        @@councils = parse_file unless loaded?
       end
-    end
-
-    def self.find_by_name(name)
-      all.detect{ |c| c.name == name } 
-    end
-
-    def self.find(id) # find on openly local's own id, takes string or integer
-      match_id = id.is_a?(Fixnum) ? id.to_s : id
-      all.detect{ |c| c.id == match_id } 
-    end
+      private :load!
     
-    def self.all
-      load! unless loaded?
-      @@councils
-    end
+      def loaded?
+        !@@councils.nil?
+      end
 
-    def self.count
-      all.size
+      def all
+        load! unless loaded?
+        @@councils
+      end
+    
+      def councils_filename
+        File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+      end
+
+      def councils_file
+        File.new(councils_filename)
+      end
+    
+      def councils_url
+        "http://openlylocal.com/councils/open.xml"
+      end
+
+      def fetch_file
+        url = URI.parse(councils_url)
+        req = Net::HTTP::Get.new(url.path)
+        res = Net::HTTP.start(url.host, url.port) {|http|
+          http.request(req)
+        }
+        File.open(councils_filename, 'w') {|f| f.write(res.body) }
+      end
+    
+      def parse_file
+        council_doc = REXML::Document.new(councils_file)
+        council_doc.root.elements.map do |council_node| 
+          Council.new(council_node) 
+        end
+      end
+
+      def find_by_name(name)
+        all.detect{ |c| c.name == name } 
+      end
+
+      def find(id) # find on openly local's own id, takes string or integer
+        match_id = id.is_a?(Fixnum) ? id.to_s : id
+        all.detect{ |c| c.id == match_id } 
+      end
+    
+      def count
+        all.size
+      end
+      
     end
     
   end # class Council

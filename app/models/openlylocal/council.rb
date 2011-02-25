@@ -16,16 +16,19 @@ module Openlylocal
   
     attr_accessor :xml_data, :id, :name, :openlylocal_url, :wikipedia_url, :address, :normalised_title, :url,
                   :telephone, :country, :region
-
-    OL_COUNCILS_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
-    OL_COUNCILS_URL = "http://openlylocal.com/councils/open.xml"
+    
+    @@councils = nil
+    
+    def self.unload!
+      @@councils = nil
+    end
     
     def self.councils_filename
-      OL_COUNCILS_FILENAME
+      File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
     end
 
     def self.councils_url
-      OL_COUNCILS_URL
+      "http://openlylocal.com/councils/open.xml"
     end
 
     def initialize(council_node)
@@ -52,24 +55,24 @@ module Openlylocal
       File.open(councils_filename, 'w') {|f| f.write(res.body) }
     end
     
+    def self.councils_file
+      File.new(councils_filename)
+    end
+    
     def self.fetch_file_if_needed
-      begin
-        file = File.new(councils_filename)
-      rescue Errno::ENOENT
-        fetch_file
-        file = File.new(councils_filename)
-      end 
+      fetch_file unless File.exists?(councils_filename)
+      parse_file(councils_file)
     end
 
-    file = fetch_file_if_needed
-    
-    council_doc = REXML::Document.new(file)
-    @@councils = council_doc.root.elements.map do |council_node| 
-      Council.new(council_node) 
+    def self.parse_file(file)
+      council_doc = REXML::Document.new(file)
+      @@councils = council_doc.root.elements.map do |council_node| 
+        Council.new(council_node) 
+      end
     end
-    
-  
+
     def self.find_by_name(name)
+      fetch_file_if_needed unless @@councils
       @@councils.detect{ |c| c.name == name } 
     end
 
@@ -79,10 +82,12 @@ module Openlylocal
     end
     
     def self.all
+      fetch_file_if_needed unless @@councils
       @@councils
     end
 
     def self.count
+      fetch_file_if_needed unless @@councils
       @@councils.size
     end
     

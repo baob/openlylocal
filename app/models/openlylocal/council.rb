@@ -72,13 +72,12 @@ module Openlylocal
     end
 
     def self.find_by_name(name)
-      fetch_file_if_needed unless @@councils
-      @@councils.detect{ |c| c.name == name } 
+      all.detect{ |c| c.name == name } 
     end
 
     def self.find(id) # find on openly local's own id, takes string or integer
       match_id = id.is_a?(Fixnum) ? id.to_s : id
-      @@councils.detect{ |c| c.id == match_id } 
+      all.detect{ |c| c.id == match_id } 
     end
     
     def self.all
@@ -87,8 +86,7 @@ module Openlylocal
     end
 
     def self.count
-      fetch_file_if_needed unless @@councils
-      @@councils.size
+      all.size
     end
     
   end # class Council

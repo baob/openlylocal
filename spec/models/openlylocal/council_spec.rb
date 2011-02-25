@@ -15,32 +15,47 @@ describe Openlylocal::Council do
   end
   
   describe "Caching:" do
-    before(:each) do
-      Openlylocal::Council.unload!
-      File.stub!(:exists?).with(Openlylocal::Council.councils_filename).and_return(false)
-      # Openlylocal::Council.stub!(:fetch_file).and_return(nil)
-    end
     
-    it "should fetch file once for .count" do
-      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
-      Openlylocal::Council.count
-    end
-      
-    it "should fetch file once for .all" do
-      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
-      Openlylocal::Council.all
-    end
-
-    it "should fetch file once for 5 calls to .all" do
-      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
-      5.times { Openlylocal::Council.all }
-    end
-    
-    context "on initial load" do
-      it "should not call fetch_file" do
-        Openlylocal::Council.should_not_receive(:fetch_file)
-        Openlylocal::Council
+    context "in intial state" do
+      before(:each) do
+        Openlylocal::Council.unload!
       end
+
+      context "and with no local file available" do
+    
+        before(:each) do
+          File.stub!(:exists?).with(Openlylocal::Council.councils_filename).and_return(false)
+        end
+    
+        it "should fetch file once for .count" do
+          Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+          Openlylocal::Council.count
+        end
+      
+        it "should fetch file once for .all" do
+          Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+          Openlylocal::Council.all
+        end
+
+        it "should fetch file once for 5 calls to .all" do
+          Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+          5.times { Openlylocal::Council.all }
+        end
+    
+        it "should not call fetch_file on initial load" do
+          Openlylocal::Council.should_not_receive(:fetch_file)
+          Openlylocal::Council
+        end
+        
+      end # context "and with no local file available" do
+
+      context "and with local file available" do
+        it "should not fetch file for .all" do
+          Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
+          Openlylocal::Council.all
+        end
+      end # context "and with local file available" do
+
     end
     
   end

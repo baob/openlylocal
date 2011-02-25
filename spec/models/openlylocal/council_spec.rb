@@ -41,6 +41,12 @@ describe Openlylocal::Council do
           Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
           5.times { Openlylocal::Council.all }
         end
+
+        it "should parse file once for 5 calls to .all" do
+          Openlylocal::Council.stub!(:fetch_file).and_return(nil)
+          Openlylocal::Council.should_receive(:parse_file).once.and_return([])
+          5.times { Openlylocal::Council.all }
+        end
     
         it "should not call fetch_file on initial load" do
           Openlylocal::Council.should_not_receive(:fetch_file)
@@ -55,14 +61,28 @@ describe Openlylocal::Council do
           Openlylocal::Council.all
         end
 
-          context "but the file is stale" do
-            it "should fetch file once for 5 calls to .all" do
-              Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
-                Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
-                5.times { Openlylocal::Council.all }
-              end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
-            end
-          end          
+        it "should parse file once for 5 calls to .all" do
+          Openlylocal::Council.stub!(:fetch_file).and_return(nil)
+          Openlylocal::Council.should_receive(:parse_file).once.and_return([])
+          5.times { Openlylocal::Council.all }
+        end
+
+        context "but the file is stale" do
+          it "should fetch file once for 5 calls to .all" do
+            Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+              Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+              5.times { Openlylocal::Council.all }
+            end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+          end
+
+          it "should parse file once for 5 calls to .all" do
+            Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+              Openlylocal::Council.stub!(:fetch_file).and_return(nil)
+              Openlylocal::Council.should_receive(:parse_file).once.and_return([])
+              5.times { Openlylocal::Council.all }
+            end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+          end
+        end          
           
       end # context "and with local file available" do
 
@@ -71,6 +91,9 @@ describe Openlylocal::Council do
   end
   
   describe "instances" do
+    before(:all) do
+      Openlylocal::Council.unload!
+    end
     before(:each) do
       @it = Openlylocal::Council.all.first
     end

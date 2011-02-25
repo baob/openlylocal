@@ -17,8 +17,16 @@ module Openlylocal
     attr_accessor :xml_data, :id, :name, :openlylocal_url, :wikipedia_url, :address, :normalised_title, :url,
                   :telephone, :country, :region
 
-    OL_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+    OL_COUNCILS_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
     OL_COUNCILS_URL = "http://openlylocal.com/councils/open.xml"
+    
+    def self.councils_filename
+      OL_COUNCILS_FILENAME
+    end
+
+    def self.councils_url
+      OL_COUNCILS_URL
+    end
 
     def initialize(council_node)
       self.xml_data = council_node
@@ -36,20 +44,24 @@ module Openlylocal
     end
 
     def self.fetch_file
-      url = URI.parse(OL_COUNCILS_URL)
+      url = URI.parse(councils_url)
       req = Net::HTTP::Get.new(url.path)
       res = Net::HTTP.start(url.host, url.port) {|http|
         http.request(req)
       }
-      File.open(OL_FILENAME, 'w') {|f| f.write(res.body) }
+      File.open(councils_filename, 'w') {|f| f.write(res.body) }
+    end
+    
+    def self.fetch_file_if_needed
+      begin
+        file = File.new(councils_filename)
+      rescue Errno::ENOENT
+        fetch_file
+        file = File.new(councils_filename)
+      end 
     end
 
-    begin
-      file = File.new(OL_FILENAME)
-    rescue Errno::ENOENT
-      fetch_file
-      file = File.new(OL_FILENAME)
-    end 
+    file = fetch_file_if_needed
     
     council_doc = REXML::Document.new(file)
     @@councils = council_doc.root.elements.map do |council_node| 

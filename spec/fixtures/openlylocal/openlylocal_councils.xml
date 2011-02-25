@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<councils type="array">
+  <council>
+    <address>St. Nicholas House, Broad Street, Aberdeen AB10 1AR</address>
+    <annual-audit-letter nil="true"></annual-audit-letter>
+    <authority-type>Unitary</authority-type>
+    <cipfa-code>S0001</cipfa-code>
+    <country>Scotland</country>
+    <created-at type="datetime">2009-06-17T12:29:39+01:00</created-at>
+    <data-source-name></data-source-name>
+    <data-source-url></data-source-url>
+    <defunkt type="boolean">false</defunkt>
+    <egr-id type="integer">1</egr-id>
+    <feed-url>http://www.aberdeencity.gov.uk/accnews.xml</feed-url>
+    <gss-code></gss-code>
+    <id type="integer">37</id>
+    <lat type="float">57.1481</lat>
+    <ldg-id type="integer" nil="true"></ldg-id>
+    <lng type="float">-2.096</lng>
+    <member-count type="">43</member-count>
+    <name>Aberdeen City Council</name>
+    <ness-id></ness-id>
+    <normalised-title>aberdeen</normalised-title>
+    <notes></notes>
+    <ons-url>http://neighbourhood.statistics.gov.uk/dissemination/LeadAreaSearch.do?a=3&amp;i=1&amp;m=0&amp;enc=1&amp;areaSearchText=AB10+1AR+&amp;areaSearchType=13&amp;extendedList=false&amp;searchAreas=</ons-url>
+    <open-data-licence>CCBYSA20</open-data-licence>
+    <open-data-url>http://www.aberdeencity.gov.uk/open_data/open_data_home.asp</open-data-url>
+    <os-id>7000000000030421</os-id>
+    <output-area-classification-id type="integer">1</output-area-classification-id>
+    <parent-authority-id type="integer" nil="true"></parent-authority-id>
+    <pension-fund-id type="integer">48</pension-fund-id>
+    <police-force-id type="integer">48</police-force-id>
+    <police-force-url>http://www.grampian.police.uk/</police-force-url>
+    <population type="integer">210400</population>
+    <region></region>
+    <signed-up-for-1010 type="boolean">true</signed-up-for-1010>
+    <snac-id>00QA</snac-id>
+    <telephone>01224 522000</telephone>
+    <updated-at type="datetime">2011-02-25T10:10:22+00:00</updated-at>
+    <url>http://www.aberdeencity.gov.uk</url>
+    <vat-number nil="true"></vat-number>
+    <wdtk-id type="integer">39</wdtk-id>
+    <wdtk-name>aberdeen_city_council</wdtk-name>
+    <wikipedia-url>http://en.wikipedia.org/wiki/Aberdeen_City_Council</wikipedia-url>
+    <openlylocal-url>http://openlylocal.com/councils/37-Aberdeen-City-Council</openlylocal-url>
+  </council>
+  <council>
+    <address>Woodhill House, Westburn Road, Aberdeen AB16 5GB</address>
+    <annual-audit-letter nil="true"></annual-audit-letter>
+    <authority-type>Unitary</authority-type>
+    <cipfa-code>S0002</cipfa-code>
+    <country>Scotland</country>
+    <created-at type="datetime">2009-09-05T13:59:21+01:00</created-at>
+    <data-source-name nil="true"></data-source-name>
+    <data-source-url nil="true"></data-source-url>
+    <defunkt type="boolean">false</defunkt>
+    <egr-id type="integer">2</egr-id>
+    <feed-url nil="true"></feed-url>
+    <gss-code nil="true"></gss-code>
+    <id type="integer">178</id>
+    <lat type="float">57.1524</lat>
+    <ldg-id type="integer" nil="true"></ldg-id>
+    <lng type="float">-2.13193</lng>
+    <member-count type="">0</member-count>
+    <name>Aberdeenshire Council</name>
+    <ness-id nil="true"></ness-id>
+    <normalised-title>aberdeenshire</normalised-title>
+    <notes nil="true"></notes>
+    <ons-url>http://neighbourhood.statistics.gov.uk/dissemination/LeadAreaSearch.do?a=3&amp;i=1&amp;m=0&amp;enc=1&amp;areaSearchText=AB16+5GB&amp;areaSearchType=13&amp;extendedList=false&amp;searchAreas=</ons-url>
+    <open-data-licence nil="true"></open-data-licence>
+    <open-data-url nil="true"></open-data-url>
+    <os-id>7000000000030111</os-id>
+    <output-area-classification-id type="integer">19</output-area-classification-id>
+    <parent-authority-id type="integer" nil="true"></parent-authority-id>
+    <pension-fund-id type="integer">48</pension-fund-id>
+    <police-force-id type="integer">48</police-force-id>
+    <police-force-url>http://www.grampian.police.uk/</police-force-url>
+    <population type="integer">241500</population>
+    <region nil="true"></region>
+    <signed-up-for-1010 type="boolean">false</signed-up-for-1010>
+    <snac-id>00QB</snac-id>
+    <telephone>08456 08 12 07</telephone>
+    <updated-at type="datetime">2011-02-24T23:20:15+00:00</updated-at>
+    <url>http://www.aberdeenshire.gov.uk</url>
+    <vat-number nil="true"></vat-number>
+    <wdtk-id type="integer">40</wdtk-id>
+    <wdtk-name>aberdeenshire_council</wdtk-name>
+    <wikipedia-url>http://en.wikipedia.org/wiki/Aberdeenshire</wikipedia-url>
+    <openlylocal-url>http://openlylocal.com/councils/178-Aberdeenshire-Council</openlylocal-url>
+  </council>
+  <council>
+    <address>Civic Centre, Ham Road, Shoreham-by-Sea, West Sussex BN43 6PR</address>
+    <annual-audit-letter>http://www.audit-commission.gov.uk/SiteCollectionDocuments/AnnualAuditLetters/2009/AdurDistrictCouncil.pdf</annual-audit-letter>
+    <authority-type>District</authority-type>
+    <cipfa-code>E3831</cipfa-code>
+    <country>England</country>
+    <created-at type="datetime">2009-09-05T13:59:22+01:00</created-at>
+    <data-source-name nil="true"></data-source-name>
+    <data-source-url></data-source-url>
+    <defunkt type="boolean">false</defunkt>
+    <egr-id type="integer">3</egr-id>
+    <feed-url>http://www.adur.gov.uk/rss/rss-adur-news.xml</feed-url>
+    <gss-code>E07000223</gss-code>
+    <id type="integer">179</id>
+    <lat type="float">50.8337</lat>
+    <ldg-id type="integer">1</ldg-id>
+    <lng type="float">-0.27001</lng>
+    <member-count type="">0</member-count>
+    <name>Adur District Council</name>
+    <ness-id>6113567</ness-id>
+    <normalised-title>adur</normalised-title>
+    <notes></notes>
+    <ons-url>http://neighbourhood.statistics.gov.uk/dissemination/LeadAreaSearch.do?a=3&amp;i=1&amp;m=0&amp;enc=1&amp;areaSearchText=BN43+6PR&amp;areaSearchType=13&amp;extendedList=false&amp;searchAreas=</ons-url>
+    <open-data-licence>DATAGOVUK</open-data-licence>
+    <open-data-url>http://www.adur.gov.uk/open-data/</open-data-url>
+    <os-id>7000000000016223</os-id>
+    <output-area-classification-id type="integer">12</output-area-classification-id>
+    <parent-authority-id type="integer">425</parent-authority-id>
+    <pension-fund-id type="integer">40</pension-fund-id>
+    <police-force-id type="integer">12</police-force-id>
+    <police-force-url>http://www.sussex.police.uk/</police-force-url>
+    <population type="integer">60700</population>
+    <region>South East</region>
+    <signed-up-for-1010 type="boolean">false</signed-up-for-1010>
+    <snac-id>45UB</snac-id>
+    <telephone>01273 263 000</telephone>
+    <updated-at type="datetime">2011-01-25T16:48:43+00:00</updated-at>
+    <url>http://www.adur.gov.uk</url>
+    <vat-number nil="true"></vat-number>
+    <wdtk-id type="integer">41</wdtk-id>
+    <wdtk-name>adur_district_council</wdtk-name>
+    <wikipedia-url>http://en.wikipedia.org/wiki/Adur</wikipedia-url>
+    <openlylocal-url>http://openlylocal.com/councils/179-Adur-District-Council</openlylocal-url>
+  </council>
+</councils>

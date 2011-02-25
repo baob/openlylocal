@@ -54,6 +54,16 @@ describe Openlylocal::Council do
           Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
           Openlylocal::Council.all
         end
+
+          context "but the file is stale" do
+            it "should fetch file once for 5 calls to .all" do
+              Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+                Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+                5.times { Openlylocal::Council.all }
+              end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+            end
+          end          
+          
       end # context "and with local file available" do
 
     end

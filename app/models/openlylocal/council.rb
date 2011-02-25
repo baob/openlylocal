@@ -60,7 +60,11 @@ module Openlylocal
     end
     
     def self.fetch_file_if_needed
-      fetch_file unless File.exists?(councils_filename)
+      if !File.exists?(councils_filename)
+        fetch_file 
+      elsif councils_file.mtime < Time.now - 1.day
+        fetch_file
+      end
       parse_file(councils_file)
     end
 

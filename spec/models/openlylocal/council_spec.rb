@@ -57,8 +57,12 @@ describe Openlylocal::Council do
 
       context "and with recent local file available" do
         before(:all) do
-          system( "touch #{Openlylocal::Council.councils_filename}" )
+          councils_file = mock('councils_file')
+          councils_file.stub!(:mtime).and_return( 1.second.ago )   
+          Openlylocal::Council.stub!(:councils_file).and_return(councils_file)
+          Openlylocal::Council.stub!(:parse_file).and_return([])
         end
+        
         it "should not fetch file for .all" do
           Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
           Openlylocal::Council.all

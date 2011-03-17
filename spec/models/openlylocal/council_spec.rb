@@ -11,7 +11,10 @@ end
 describe Openlylocal::Council do
 
   it "should have at least one council" do
-    Openlylocal::Council.count.should >= 1
+    Timecop.travel(Openlylocal::Council.councils_file.mtime + 5.seconds) do # make sure the file we're using looks fresh
+      Openlylocal::Council.should_not_receive(:fetch_file) # sanity check - should not go external
+      Openlylocal::Council.count.should >= 1
+    end
   end
   
   describe "Caching:" do
@@ -102,7 +105,10 @@ describe Openlylocal::Council do
       Openlylocal::Council.unload!
     end
     before(:each) do
-      @it = Openlylocal::Council.all.first
+      Timecop.travel(Openlylocal::Council.councils_file.mtime + 5.seconds) do # make sure the file we're using looks fresh
+        Openlylocal::Council.should_not_receive(:fetch_file) # sanity check - should not go external
+        @it = Openlylocal::Council.all.first
+      end
     end
     %w{ xml_data name address id telephone }.each do |attribute|
       it "should have attribute #{attribute}" do

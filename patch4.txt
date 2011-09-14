@@ -1,0 +1,40 @@
+From beb389077199ba3063ccd43a817b32e29c9544b7 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Thu, 17 Mar 2011 17:09:26 +0000
+Subject: openlylocal should not do any real http requests in specs
+
+---
+ spec/models/openlylocal/council_spec.rb |   10 ++++++++--
+ 1 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+index 7ab43fd..7c1108e 100644
+--- a/spec/models/openlylocal/council_spec.rb
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -11,7 +11,10 @@ end
+ describe Openlylocal::Council do
+ 
+   it "should have at least one council" do
+-    Openlylocal::Council.count.should >= 1
++    Timecop.travel(Openlylocal::Council.councils_file.mtime + 5.seconds) do # make sure the file we're using looks fresh
++      Openlylocal::Council.should_not_receive(:fetch_file) # sanity check - should not go external
++      Openlylocal::Council.count.should >= 1
++    end
+   end
+   
+   describe "Caching:" do
+@@ -102,7 +105,10 @@ describe Openlylocal::Council do
+       Openlylocal::Council.unload!
+     end
+     before(:each) do
+-      @it = Openlylocal::Council.all.first
++      Timecop.travel(Openlylocal::Council.councils_file.mtime + 5.seconds) do # make sure the file we're using looks fresh
++        Openlylocal::Council.should_not_receive(:fetch_file) # sanity check - should not go external
++        @it = Openlylocal::Council.all.first
++      end
+     end
+     %w{ xml_data name address id telephone }.each do |attribute|
+       it "should have attribute #{attribute}" do
+-- 
+1.7.6
+

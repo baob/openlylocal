@@ -1,0 +1,958 @@
+From c5a113aff47fd03a01f68457a436dea5d0b36993 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 13:36:17 +0000
+Subject: basic specs
+
+---
+ app/models/openlylocal/council.rb       |   30 +++++++++++++++++++++---------
+ spec/models/openlylocal/council_spec.rb |   20 ++++++++++++++++++++
+ 2 files changed, 41 insertions(+), 9 deletions(-)
+ create mode 100644 spec/models/openlylocal/council_spec.rb
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index d1c3d6e..9ab6f45 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -17,8 +17,16 @@ module Openlylocal
+     attr_accessor :xml_data, :id, :name, :openlylocal_url, :wikipedia_url, :address, :normalised_title, :url,
+                   :telephone, :country, :region
+ 
+-    OL_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
++    OL_COUNCILS_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+     OL_COUNCILS_URL = "http://openlylocal.com/councils/open.xml"
++    
++    def self.councils_filename
++      OL_COUNCILS_FILENAME
++    end
++
++    def self.councils_url
++      OL_COUNCILS_URL
++    end
+ 
+     def initialize(council_node)
+       self.xml_data = council_node
+@@ -36,20 +44,24 @@ module Openlylocal
+     end
+ 
+     def self.fetch_file
+-      url = URI.parse(OL_COUNCILS_URL)
++      url = URI.parse(councils_url)
+       req = Net::HTTP::Get.new(url.path)
+       res = Net::HTTP.start(url.host, url.port) {|http|
+         http.request(req)
+       }
+-      File.open(OL_FILENAME, 'w') {|f| f.write(res.body) }
++      File.open(councils_filename, 'w') {|f| f.write(res.body) }
++    end
++    
++    def self.fetch_file_if_needed
++      begin
++        file = File.new(councils_filename)
++      rescue Errno::ENOENT
++        fetch_file
++        file = File.new(councils_filename)
++      end 
+     end
+ 
+-    begin
+-      file = File.new(OL_FILENAME)
+-    rescue Errno::ENOENT
+-      fetch_file
+-      file = File.new(OL_FILENAME)
+-    end 
++    file = fetch_file_if_needed
+     
+     council_doc = REXML::Document.new(file)
+     @@councils = council_doc.root.elements.map do |council_node| 
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+new file mode 100644
+index 0000000..29be5a7
+--- /dev/null
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -0,0 +1,20 @@
++require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
++
++describe Openlylocal::Council do
++
++  it "should have at least one council" do
++    Openlylocal::Council.count.should >= 1
++  end
++  
++  describe "instances" do
++    before(:each) do
++      @it = Openlylocal::Council.all.first
++    end
++    %w{ xml_data name address id telephone }.each do |attribute|
++      it "should have attribute #{attribute}" do
++        @it.should respond_to(attribute.to_sym)
++      end
++    end
++  end 
++  
++end
+-- 
+1.7.6
+
+
+From e0e0cfba2bbee11689a3fe94fb4c4eba9c5f30c8 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 15:43:16 +0000
+Subject: start of openly local cache specs
+
+---
+ app/models/openlylocal/council.rb       |   41 +++++++++++++++++-------------
+ spec/models/openlylocal/council_spec.rb |   39 +++++++++++++++++++++++++++++
+ 2 files changed, 62 insertions(+), 18 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index 9ab6f45..760cdf2 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -16,16 +16,19 @@ module Openlylocal
+   
+     attr_accessor :xml_data, :id, :name, :openlylocal_url, :wikipedia_url, :address, :normalised_title, :url,
+                   :telephone, :country, :region
+-
+-    OL_COUNCILS_FILENAME = File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+-    OL_COUNCILS_URL = "http://openlylocal.com/councils/open.xml"
++    
++    @@councils = nil
++    
++    def self.unload!
++      @@councils = nil
++    end
+     
+     def self.councils_filename
+-      OL_COUNCILS_FILENAME
++      File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+     end
+ 
+     def self.councils_url
+-      OL_COUNCILS_URL
++      "http://openlylocal.com/councils/open.xml"
+     end
+ 
+     def initialize(council_node)
+@@ -52,24 +55,24 @@ module Openlylocal
+       File.open(councils_filename, 'w') {|f| f.write(res.body) }
+     end
+     
++    def self.councils_file
++      File.new(councils_filename)
++    end
++    
+     def self.fetch_file_if_needed
+-      begin
+-        file = File.new(councils_filename)
+-      rescue Errno::ENOENT
+-        fetch_file
+-        file = File.new(councils_filename)
+-      end 
++      fetch_file unless File.exists?(councils_filename)
++      parse_file(councils_file)
+     end
+ 
+-    file = fetch_file_if_needed
+-    
+-    council_doc = REXML::Document.new(file)
+-    @@councils = council_doc.root.elements.map do |council_node| 
+-      Council.new(council_node) 
++    def self.parse_file(file)
++      council_doc = REXML::Document.new(file)
++      @@councils = council_doc.root.elements.map do |council_node| 
++        Council.new(council_node) 
++      end
+     end
+-    
+-  
++
+     def self.find_by_name(name)
++      fetch_file_if_needed unless @@councils
+       @@councils.detect{ |c| c.name == name } 
+     end
+ 
+@@ -79,10 +82,12 @@ module Openlylocal
+     end
+     
+     def self.all
++      fetch_file_if_needed unless @@councils
+       @@councils
+     end
+ 
+     def self.count
++      fetch_file_if_needed unless @@councils
+       @@councils.size
+     end
+     
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+index 29be5a7..8fd7aba 100644
+--- a/spec/models/openlylocal/council_spec.rb
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -1,11 +1,50 @@
+ require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
+ 
++Openlylocal::Council # load it up before modifying 
++
++class Openlylocal::Council
++  def self.councils_file 
++    File.new(File.dirname(__FILE__) + '/../../fixtures/openlylocal/openlylocal_councils.xml')
++  end
++end
++
+ describe Openlylocal::Council do
+ 
+   it "should have at least one council" do
+     Openlylocal::Council.count.should >= 1
+   end
+   
++  describe "Caching:" do
++    before(:each) do
++      Openlylocal::Council.unload!
++      File.stub!(:exists?).with(Openlylocal::Council.councils_filename).and_return(false)
++      # Openlylocal::Council.stub!(:fetch_file).and_return(nil)
++    end
++    
++    it "should fetch file once for .count" do
++      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++      Openlylocal::Council.count
++    end
++      
++    it "should fetch file once for .all" do
++      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++      Openlylocal::Council.all
++    end
++
++    it "should fetch file once for 5 calls to .all" do
++      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++      5.times { Openlylocal::Council.all }
++    end
++    
++    context "on initial load" do
++      it "should not call fetch_file" do
++        Openlylocal::Council.should_not_receive(:fetch_file)
++        Openlylocal::Council
++      end
++    end
++    
++  end
++  
+   describe "instances" do
+     before(:each) do
+       @it = Openlylocal::Council.all.first
+-- 
+1.7.6
+
+
+From 64250ff491f6828b432e271db4e7f9432da161b4 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 15:44:33 +0000
+Subject: missed file
+
+---
+ spec/fixtures/openlylocal/openlylocal_councils.xml |  135 ++++++++++++++++++++
+ 1 files changed, 135 insertions(+), 0 deletions(-)
+ create mode 100644 spec/fixtures/openlylocal/openlylocal_councils.xml
+
+diff --git a/spec/fixtures/openlylocal/openlylocal_councils.xml b/spec/fixtures/openlylocal/openlylocal_councils.xml
+new file mode 100644
+index 0000000..3f63cda
+--- /dev/null
++++ b/spec/fixtures/openlylocal/openlylocal_councils.xml
+@@ -0,0 +1,135 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<councils type="array">
++  <council>
++    <address>St. Nicholas House, Broad Street, Aberdeen AB10 1AR</address>
++    <annual-audit-letter nil="true"></annual-audit-letter>
++    <authority-type>Unitary</authority-type>
++    <cipfa-code>S0001</cipfa-code>
++    <country>Scotland</country>
++    <created-at type="datetime">2009-06-17T12:29:39+01:00</created-at>
++    <data-source-name></data-source-name>
++    <data-source-url></data-source-url>
++    <defunkt type="boolean">false</defunkt>
++    <egr-id type="integer">1</egr-id>
++    <feed-url>http://www.aberdeencity.gov.uk/accnews.xml</feed-url>
++    <gss-code></gss-code>
++    <id type="integer">37</id>
++    <lat type="float">57.1481</lat>
++    <ldg-id type="integer" nil="true"></ldg-id>
++    <lng type="float">-2.096</lng>
++    <member-count type="">43</member-count>
++    <name>Aberdeen City Council</name>
++    <ness-id></ness-id>
++    <normalised-title>aberdeen</normalised-title>
++    <notes></notes>
++    <ons-url>http://neighbourhood.statistics.gov.uk/dissemination/LeadAreaSearch.do?a=3&amp;i=1&amp;m=0&amp;enc=1&amp;areaSearchText=AB10+1AR+&amp;areaSearchType=13&amp;extendedList=false&amp;searchAreas=</ons-url>
++    <open-data-licence>CCBYSA20</open-data-licence>
++    <open-data-url>http://www.aberdeencity.gov.uk/open_data/open_data_home.asp</open-data-url>
++    <os-id>7000000000030421</os-id>
++    <output-area-classification-id type="integer">1</output-area-classification-id>
++    <parent-authority-id type="integer" nil="true"></parent-authority-id>
++    <pension-fund-id type="integer">48</pension-fund-id>
++    <police-force-id type="integer">48</police-force-id>
++    <police-force-url>http://www.grampian.police.uk/</police-force-url>
++    <population type="integer">210400</population>
++    <region></region>
++    <signed-up-for-1010 type="boolean">true</signed-up-for-1010>
++    <snac-id>00QA</snac-id>
++    <telephone>01224 522000</telephone>
++    <updated-at type="datetime">2011-02-25T10:10:22+00:00</updated-at>
++    <url>http://www.aberdeencity.gov.uk</url>
++    <vat-number nil="true"></vat-number>
++    <wdtk-id type="integer">39</wdtk-id>
++    <wdtk-name>aberdeen_city_council</wdtk-name>
++    <wikipedia-url>http://en.wikipedia.org/wiki/Aberdeen_City_Council</wikipedia-url>
++    <openlylocal-url>http://openlylocal.com/councils/37-Aberdeen-City-Council</openlylocal-url>
++  </council>
++  <council>
++    <address>Woodhill House, Westburn Road, Aberdeen AB16 5GB</address>
++    <annual-audit-letter nil="true"></annual-audit-letter>
++    <authority-type>Unitary</authority-type>
++    <cipfa-code>S0002</cipfa-code>
++    <country>Scotland</country>
++    <created-at type="datetime">2009-09-05T13:59:21+01:00</created-at>
++    <data-source-name nil="true"></data-source-name>
++    <data-source-url nil="true"></data-source-url>
++    <defunkt type="boolean">false</defunkt>
++    <egr-id type="integer">2</egr-id>
++    <feed-url nil="true"></feed-url>
++    <gss-code nil="true"></gss-code>
++    <id type="integer">178</id>
++    <lat type="float">57.1524</lat>
++    <ldg-id type="integer" nil="true"></ldg-id>
++    <lng type="float">-2.13193</lng>
++    <member-count type="">0</member-count>
++    <name>Aberdeenshire Council</name>
++    <ness-id nil="true"></ness-id>
++    <normalised-title>aberdeenshire</normalised-title>
++    <notes nil="true"></notes>
++    <ons-url>http://neighbourhood.statistics.gov.uk/dissemination/LeadAreaSearch.do?a=3&amp;i=1&amp;m=0&amp;enc=1&amp;areaSearchText=AB16+5GB&amp;areaSearchType=13&amp;extendedList=false&amp;searchAreas=</ons-url>
++    <open-data-licence nil="true"></open-data-licence>
++    <open-data-url nil="true"></open-data-url>
++    <os-id>7000000000030111</os-id>
++    <output-area-classification-id type="integer">19</output-area-classification-id>
++    <parent-authority-id type="integer" nil="true"></parent-authority-id>
++    <pension-fund-id type="integer">48</pension-fund-id>
++    <police-force-id type="integer">48</police-force-id>
++    <police-force-url>http://www.grampian.police.uk/</police-force-url>
++    <population type="integer">241500</population>
++    <region nil="true"></region>
++    <signed-up-for-1010 type="boolean">false</signed-up-for-1010>
++    <snac-id>00QB</snac-id>
++    <telephone>08456 08 12 07</telephone>
++    <updated-at type="datetime">2011-02-24T23:20:15+00:00</updated-at>
++    <url>http://www.aberdeenshire.gov.uk</url>
++    <vat-number nil="true"></vat-number>
++    <wdtk-id type="integer">40</wdtk-id>
++    <wdtk-name>aberdeenshire_council</wdtk-name>
++    <wikipedia-url>http://en.wikipedia.org/wiki/Aberdeenshire</wikipedia-url>
++    <openlylocal-url>http://openlylocal.com/councils/178-Aberdeenshire-Council</openlylocal-url>
++  </council>
++  <council>
++    <address>Civic Centre, Ham Road, Shoreham-by-Sea, West Sussex BN43 6PR</address>
++    <annual-audit-letter>http://www.audit-commission.gov.uk/SiteCollectionDocuments/AnnualAuditLetters/2009/AdurDistrictCouncil.pdf</annual-audit-letter>
++    <authority-type>District</authority-type>
++    <cipfa-code>E3831</cipfa-code>
++    <country>England</country>
++    <created-at type="datetime">2009-09-05T13:59:22+01:00</created-at>
++    <data-source-name nil="true"></data-source-name>
++    <data-source-url></data-source-url>
++    <defunkt type="boolean">false</defunkt>
++    <egr-id type="integer">3</egr-id>
++    <feed-url>http://www.adur.gov.uk/rss/rss-adur-news.xml</feed-url>
++    <gss-code>E07000223</gss-code>
++    <id type="integer">179</id>
++    <lat type="float">50.8337</lat>
++    <ldg-id type="integer">1</ldg-id>
++    <lng type="float">-0.27001</lng>
++    <member-count type="">0</member-count>
++    <name>Adur District Council</name>
++    <ness-id>6113567</ness-id>
++    <normalised-title>adur</normalised-title>
++    <notes></notes>
++    <ons-url>http://neighbourhood.statistics.gov.uk/dissemination/LeadAreaSearch.do?a=3&amp;i=1&amp;m=0&amp;enc=1&amp;areaSearchText=BN43+6PR&amp;areaSearchType=13&amp;extendedList=false&amp;searchAreas=</ons-url>
++    <open-data-licence>DATAGOVUK</open-data-licence>
++    <open-data-url>http://www.adur.gov.uk/open-data/</open-data-url>
++    <os-id>7000000000016223</os-id>
++    <output-area-classification-id type="integer">12</output-area-classification-id>
++    <parent-authority-id type="integer">425</parent-authority-id>
++    <pension-fund-id type="integer">40</pension-fund-id>
++    <police-force-id type="integer">12</police-force-id>
++    <police-force-url>http://www.sussex.police.uk/</police-force-url>
++    <population type="integer">60700</population>
++    <region>South East</region>
++    <signed-up-for-1010 type="boolean">false</signed-up-for-1010>
++    <snac-id>45UB</snac-id>
++    <telephone>01273 263 000</telephone>
++    <updated-at type="datetime">2011-01-25T16:48:43+00:00</updated-at>
++    <url>http://www.adur.gov.uk</url>
++    <vat-number nil="true"></vat-number>
++    <wdtk-id type="integer">41</wdtk-id>
++    <wdtk-name>adur_district_council</wdtk-name>
++    <wikipedia-url>http://en.wikipedia.org/wiki/Adur</wikipedia-url>
++    <openlylocal-url>http://openlylocal.com/councils/179-Adur-District-Council</openlylocal-url>
++  </council>
++</councils>
+-- 
+1.7.6
+
+
+From 09b2bc5ff87d11f71383ef1bdba4673e3051f4b4 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 16:15:10 +0000
+Subject: refactoring
+
+---
+ app/models/openlylocal/council.rb       |    8 ++---
+ spec/models/openlylocal/council_spec.rb |   59 +++++++++++++++++++-----------
+ 2 files changed, 40 insertions(+), 27 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index 760cdf2..9d64711 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -72,13 +72,12 @@ module Openlylocal
+     end
+ 
+     def self.find_by_name(name)
+-      fetch_file_if_needed unless @@councils
+-      @@councils.detect{ |c| c.name == name } 
++      all.detect{ |c| c.name == name } 
+     end
+ 
+     def self.find(id) # find on openly local's own id, takes string or integer
+       match_id = id.is_a?(Fixnum) ? id.to_s : id
+-      @@councils.detect{ |c| c.id == match_id } 
++      all.detect{ |c| c.id == match_id } 
+     end
+     
+     def self.all
+@@ -87,8 +86,7 @@ module Openlylocal
+     end
+ 
+     def self.count
+-      fetch_file_if_needed unless @@councils
+-      @@councils.size
++      all.size
+     end
+     
+   end # class Council
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+index 8fd7aba..676e9e3 100644
+--- a/spec/models/openlylocal/council_spec.rb
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -15,32 +15,47 @@ describe Openlylocal::Council do
+   end
+   
+   describe "Caching:" do
+-    before(:each) do
+-      Openlylocal::Council.unload!
+-      File.stub!(:exists?).with(Openlylocal::Council.councils_filename).and_return(false)
+-      # Openlylocal::Council.stub!(:fetch_file).and_return(nil)
+-    end
+     
+-    it "should fetch file once for .count" do
+-      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+-      Openlylocal::Council.count
+-    end
++    context "in intial state" do
++      before(:each) do
++        Openlylocal::Council.unload!
++      end
++
++      context "and with no local file available" do
++    
++        before(:each) do
++          File.stub!(:exists?).with(Openlylocal::Council.councils_filename).and_return(false)
++        end
++    
++        it "should fetch file once for .count" do
++          Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++          Openlylocal::Council.count
++        end
+       
+-    it "should fetch file once for .all" do
+-      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+-      Openlylocal::Council.all
+-    end
++        it "should fetch file once for .all" do
++          Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++          Openlylocal::Council.all
++        end
+ 
+-    it "should fetch file once for 5 calls to .all" do
+-      Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+-      5.times { Openlylocal::Council.all }
+-    end
++        it "should fetch file once for 5 calls to .all" do
++          Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++          5.times { Openlylocal::Council.all }
++        end
+     
+-    context "on initial load" do
+-      it "should not call fetch_file" do
+-        Openlylocal::Council.should_not_receive(:fetch_file)
+-        Openlylocal::Council
+-      end
++        it "should not call fetch_file on initial load" do
++          Openlylocal::Council.should_not_receive(:fetch_file)
++          Openlylocal::Council
++        end
++        
++      end # context "and with no local file available" do
++
++      context "and with local file available" do
++        it "should not fetch file for .all" do
++          Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
++          Openlylocal::Council.all
++        end
++      end # context "and with local file available" do
++
+     end
+     
+   end
+-- 
+1.7.6
+
+
+From ebc0d7ff214743b887e7b4ee45db3c3448d05011 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 17:05:10 +0000
+Subject: cached file expires
+
+---
+ app/models/openlylocal/council.rb       |    6 +++++-
+ spec/models/openlylocal/council_spec.rb |   10 ++++++++++
+ spec/spec_helper.rb                     |    1 +
+ 3 files changed, 16 insertions(+), 1 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index 9d64711..72c45b0 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -60,7 +60,11 @@ module Openlylocal
+     end
+     
+     def self.fetch_file_if_needed
+-      fetch_file unless File.exists?(councils_filename)
++      if !File.exists?(councils_filename)
++        fetch_file 
++      elsif councils_file.mtime < Time.now - 1.day
++        fetch_file
++      end
+       parse_file(councils_file)
+     end
+ 
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+index 676e9e3..aaf9548 100644
+--- a/spec/models/openlylocal/council_spec.rb
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -54,6 +54,16 @@ describe Openlylocal::Council do
+           Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
+           Openlylocal::Council.all
+         end
++
++          context "but the file is stale" do
++            it "should fetch file once for 5 calls to .all" do
++              Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
++                Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++                5.times { Openlylocal::Council.all }
++              end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
++            end
++          end          
++          
+       end # context "and with local file available" do
+ 
+     end
+diff --git a/spec/spec_helper.rb b/spec/spec_helper.rb
+index a30659c..a1ae1e3 100644
+--- a/spec/spec_helper.rb
++++ b/spec/spec_helper.rb
+@@ -12,6 +12,7 @@ require 'spec/should_not_render'
+ require 'spec/item_in_one_list_matcher'
+ require File.expand_path(File.dirname(__FILE__) + "/time_spec_helper")
+ require File.expand_path(File.dirname(__FILE__) + "/lib/matchers")
++require 'timecop'
+ 
+ JBE_CONFIG[:enabled] = true
+ 
+-- 
+1.7.6
+
+
+From 3b7c2bd5a95b88a94bb6acda24e925cc52f1777d Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 17:59:49 +0000
+Subject: eliminate unecessary parsing
+
+---
+ app/models/openlylocal/council.rb       |   10 ++++++-
+ spec/models/openlylocal/council_spec.rb |   39 ++++++++++++++++++++++++------
+ 2 files changed, 39 insertions(+), 10 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index 72c45b0..fee530b 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -62,15 +62,21 @@ module Openlylocal
+     def self.fetch_file_if_needed
+       if !File.exists?(councils_filename)
+         fetch_file 
++        @@councils = parse_file(councils_file)
+       elsif councils_file.mtime < Time.now - 1.day
+         fetch_file
++        @@councils = parse_file(councils_file)
+       end
+-      parse_file(councils_file)
++      @@councils = parse_file(councils_file) unless loaded?
++    end
++    
++    def self.loaded?
++      !@@councils.nil?
+     end
+ 
+     def self.parse_file(file)
+       council_doc = REXML::Document.new(file)
+-      @@councils = council_doc.root.elements.map do |council_node| 
++      council_doc.root.elements.map do |council_node| 
+         Council.new(council_node) 
+       end
+     end
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+index aaf9548..e03de2f 100644
+--- a/spec/models/openlylocal/council_spec.rb
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -41,6 +41,12 @@ describe Openlylocal::Council do
+           Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+           5.times { Openlylocal::Council.all }
+         end
++
++        it "should parse file once for 5 calls to .all" do
++          Openlylocal::Council.stub!(:fetch_file).and_return(nil)
++          Openlylocal::Council.should_receive(:parse_file).once.and_return([])
++          5.times { Openlylocal::Council.all }
++        end
+     
+         it "should not call fetch_file on initial load" do
+           Openlylocal::Council.should_not_receive(:fetch_file)
+@@ -55,14 +61,28 @@ describe Openlylocal::Council do
+           Openlylocal::Council.all
+         end
+ 
+-          context "but the file is stale" do
+-            it "should fetch file once for 5 calls to .all" do
+-              Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+-                Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
+-                5.times { Openlylocal::Council.all }
+-              end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
+-            end
+-          end          
++        it "should parse file once for 5 calls to .all" do
++          Openlylocal::Council.stub!(:fetch_file).and_return(nil)
++          Openlylocal::Council.should_receive(:parse_file).once.and_return([])
++          5.times { Openlylocal::Council.all }
++        end
++
++        context "but the file is stale" do
++          it "should fetch file once for 5 calls to .all" do
++            Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
++              Openlylocal::Council.should_receive(:fetch_file).once.and_return(nil)
++              5.times { Openlylocal::Council.all }
++            end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
++          end
++
++          it "should parse file once for 5 calls to .all" do
++            Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
++              Openlylocal::Council.stub!(:fetch_file).and_return(nil)
++              Openlylocal::Council.should_receive(:parse_file).once.and_return([])
++              5.times { Openlylocal::Council.all }
++            end # Timecop.travel(Openlylocal::Council.councils_file.mtime + 2.days) do
++          end
++        end          
+           
+       end # context "and with local file available" do
+ 
+@@ -71,6 +91,9 @@ describe Openlylocal::Council do
+   end
+   
+   describe "instances" do
++    before(:all) do
++      Openlylocal::Council.unload!
++    end
+     before(:each) do
+       @it = Openlylocal::Council.all.first
+     end
+-- 
+1.7.6
+
+
+From 6ef50d3d6d9b673c20e828c2adc0c0a7fa87e132 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 18:05:44 +0000
+Subject: make sure it doesnt fall over tomorrow
+
+---
+ spec/models/openlylocal/council_spec.rb |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/spec/models/openlylocal/council_spec.rb b/spec/models/openlylocal/council_spec.rb
+index e03de2f..fe0ac54 100644
+--- a/spec/models/openlylocal/council_spec.rb
++++ b/spec/models/openlylocal/council_spec.rb
+@@ -55,7 +55,10 @@ describe Openlylocal::Council do
+         
+       end # context "and with no local file available" do
+ 
+-      context "and with local file available" do
++      context "and with recent local file available" do
++        before(:all) do
++          system( "touch #{Openlylocal::Council.councils_filename}" )
++        end
+         it "should not fetch file for .all" do
+           Openlylocal::Council.should_not_receive(:fetch_file).and_return(nil)
+           Openlylocal::Council.all
+-- 
+1.7.6
+
+
+From 4c903a61e6c63065c4109e54af3719da539c8fc8 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 18:14:36 +0000
+Subject: refactoring
+
+---
+ app/models/openlylocal/council.rb |    6 ++----
+ 1 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index fee530b..23fd9a7 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -7,9 +7,7 @@ module Openlylocal
+   class Council
+     
+     # NOTE NOTE NOTE -----  This is not production ready code
+-    # 1) Needs lazy loading of URL (I think)
+     # 2) Needs memcaching
+-    # 3) Needs either elimination of file or else managing when file goes stale
+     # 4) Protection against HTTP problems, such as 404, server not responsding, short data file
+     # 5) protection against XML parsing errors
+     # 6) Probably more ...
+@@ -59,7 +57,7 @@ module Openlylocal
+       File.new(councils_filename)
+     end
+     
+-    def self.fetch_file_if_needed
++    def self.load!
+       if !File.exists?(councils_filename)
+         fetch_file 
+         @@councils = parse_file(councils_file)
+@@ -91,7 +89,7 @@ module Openlylocal
+     end
+     
+     def self.all
+-      fetch_file_if_needed unless @@councils
++      load! unless loaded?
+       @@councils
+     end
+ 
+-- 
+1.7.6
+
+
+From da58435f2fc7203cbe377e2bbfdf5683643ada5e Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 18:16:38 +0000
+Subject: refactoring
+
+---
+ app/models/openlylocal/council.rb |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index 23fd9a7..3d5ffe3 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -60,20 +60,20 @@ module Openlylocal
+     def self.load!
+       if !File.exists?(councils_filename)
+         fetch_file 
+-        @@councils = parse_file(councils_file)
++        @@councils = parse_file
+       elsif councils_file.mtime < Time.now - 1.day
+         fetch_file
+-        @@councils = parse_file(councils_file)
++        @@councils = parse_file
+       end
+-      @@councils = parse_file(councils_file) unless loaded?
++      @@councils = parse_file unless loaded?
+     end
+     
+     def self.loaded?
+       !@@councils.nil?
+     end
+ 
+-    def self.parse_file(file)
+-      council_doc = REXML::Document.new(file)
++    def self.parse_file
++      council_doc = REXML::Document.new(councils_file)
+       council_doc.root.elements.map do |council_node| 
+         Council.new(council_node) 
+       end
+-- 
+1.7.6
+
+
+From e9f1c5db29da3e808a4b18e01c643ed54f3ea450 Mon Sep 17 00:00:00 2001
+From: baob <coder@onesandthrees.com>
+Date: Fri, 25 Feb 2011 18:37:04 +0000
+Subject: refactoring
+
+---
+ app/models/openlylocal/council.rb |  113 +++++++++++++++++++------------------
+ 1 files changed, 59 insertions(+), 54 deletions(-)
+
+diff --git a/app/models/openlylocal/council.rb b/app/models/openlylocal/council.rb
+index 3d5ffe3..698eb65 100644
+--- a/app/models/openlylocal/council.rb
++++ b/app/models/openlylocal/council.rb
+@@ -16,18 +16,6 @@ module Openlylocal
+                   :telephone, :country, :region
+     
+     @@councils = nil
+-    
+-    def self.unload!
+-      @@councils = nil
+-    end
+-    
+-    def self.councils_filename
+-      File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+-    end
+-
+-    def self.councils_url
+-      "http://openlylocal.com/councils/open.xml"
+-    end
+ 
+     def initialize(council_node)
+       self.xml_data = council_node
+@@ -44,57 +32,74 @@ module Openlylocal
+       self
+     end
+ 
+-    def self.fetch_file
+-      url = URI.parse(councils_url)
+-      req = Net::HTTP::Get.new(url.path)
+-      res = Net::HTTP.start(url.host, url.port) {|http|
+-        http.request(req)
+-      }
+-      File.open(councils_filename, 'w') {|f| f.write(res.body) }
+-    end
++    class << self
+     
+-    def self.councils_file
+-      File.new(councils_filename)
+-    end
+-    
+-    def self.load!
+-      if !File.exists?(councils_filename)
+-        fetch_file 
+-        @@councils = parse_file
+-      elsif councils_file.mtime < Time.now - 1.day
+-        fetch_file
+-        @@councils = parse_file
++      def unload!
++        @@councils = nil
+       end
+-      @@councils = parse_file unless loaded?
+-    end
++
++      def load!
++        if !File.exists?(councils_filename)
++          fetch_file 
++          @@councils = parse_file
++        elsif councils_file.mtime < Time.now - 1.day
++          fetch_file
++          @@councils = parse_file
++        end
++        @@councils = parse_file unless loaded?
++      end
++      private :load!
+     
+-    def self.loaded?
+-      !@@councils.nil?
+-    end
++      def loaded?
++        !@@councils.nil?
++      end
+ 
+-    def self.parse_file
+-      council_doc = REXML::Document.new(councils_file)
+-      council_doc.root.elements.map do |council_node| 
+-        Council.new(council_node) 
++      def all
++        load! unless loaded?
++        @@councils
++      end
++    
++      def councils_filename
++        File.expand_path(File.dirname(__FILE__) + "/../../../files/openlylocal_councils.xml")
+       end
+-    end
+ 
+-    def self.find_by_name(name)
+-      all.detect{ |c| c.name == name } 
+-    end
++      def councils_file
++        File.new(councils_filename)
++      end
++    
++      def councils_url
++        "http://openlylocal.com/councils/open.xml"
++      end
+ 
+-    def self.find(id) # find on openly local's own id, takes string or integer
+-      match_id = id.is_a?(Fixnum) ? id.to_s : id
+-      all.detect{ |c| c.id == match_id } 
+-    end
++      def fetch_file
++        url = URI.parse(councils_url)
++        req = Net::HTTP::Get.new(url.path)
++        res = Net::HTTP.start(url.host, url.port) {|http|
++          http.request(req)
++        }
++        File.open(councils_filename, 'w') {|f| f.write(res.body) }
++      end
+     
+-    def self.all
+-      load! unless loaded?
+-      @@councils
+-    end
++      def parse_file
++        council_doc = REXML::Document.new(councils_file)
++        council_doc.root.elements.map do |council_node| 
++          Council.new(council_node) 
++        end
++      end
++
++      def find_by_name(name)
++        all.detect{ |c| c.name == name } 
++      end
+ 
+-    def self.count
+-      all.size
++      def find(id) # find on openly local's own id, takes string or integer
++        match_id = id.is_a?(Fixnum) ? id.to_s : id
++        all.detect{ |c| c.id == match_id } 
++      end
++    
++      def count
++        all.size
++      end
++      
+     end
+     
+   end # class Council
+-- 
+1.7.6
+

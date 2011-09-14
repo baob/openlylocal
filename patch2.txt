@@ -565,18 +565,6 @@ index 676e9e3..aaf9548 100644
        end # context "and with local file available" do
  
      end
-diff --git a/spec/spec_helper.rb b/spec/spec_helper.rb
-index a30659c..a1ae1e3 100644
---- a/spec/spec_helper.rb
-+++ b/spec/spec_helper.rb
-@@ -12,6 +12,7 @@ require 'spec/should_not_render'
- require 'spec/item_in_one_list_matcher'
- require File.expand_path(File.dirname(__FILE__) + "/time_spec_helper")
- require File.expand_path(File.dirname(__FILE__) + "/lib/matchers")
-+require 'timecop'
- 
- JBE_CONFIG[:enabled] = true
- 
 -- 
 1.7.6
 
